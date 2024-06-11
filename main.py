@@ -5,13 +5,10 @@ import json
 import requests
 
 
-
-
-
-
 class Scraper:
 
     items_purchased_list = []
+    major = True
     def __init__(self, api_key:str):
         self.api_key = api_key
 
@@ -22,10 +19,21 @@ class Scraper:
             return answer.json()
     
 
-    def tier_choice(self, choice: int):
-        choices_list = {0: 'https://euw1.api.riotgames.com/lol/league/v4/challengerleagues/by-queue/RANKED_SOLO_5x5?', 1: 'https://euw1.api.riotgames.com/lol/league/v4/grandmasterleagues/by-queue/RANKED_SOLO_5x5?', 2: 'https://euw1.api.riotgames.com/lol/league/v4/masterleagues/by-queue/RANKED_SOLO_5x5?'}
-        return self.api_urls(choices_list[choice])
-
+    def tier_choice(self, tier: int, division: int):
+        tier_major = {
+        0: 'https://euw1.api.riotgames.com/lol/league/v4/challengerleagues/by-queue/RANKED_SOLO_5x5?', 
+        1: 'https://euw1.api.riotgames.com/lol/league/v4/grandmasterleagues/by-queue/RANKED_SOLO_5x5?', 
+        2: 'https://euw1.api.riotgames.com/lol/league/v4/masterleagues/by-queue/RANKED_SOLO_5x5?'}
+        tier_minors = {3: 'DIAMOND', 4: 'EMERALD', 5: 'GOLD', 6: 'SILVER', 7: 'BRONZE' ,8: 'IRON'}
+        divisions = {1: 'I', 2: 'II', 3: 'III', 4: 'IV',}
+        if tier >= 3:
+            chosen = f'https://euw1.api.riotgames.com/lol/league/v4/entries/RANKED_SOLO_5x5/{tier_minors[tier]}/{divisions[division]}?page=1&'
+            self.major = False
+            return self.api_urls(chosen)
+        
+        print(tier_major[tier])
+        return self.api_urls(tier_major[tier])
+    
 
     @staticmethod
     def list_maker(num: int, player: list):
@@ -50,8 +58,15 @@ class Scraper:
         list_of_people_puuids = []
         list_of_summonerId = []
         stored_games = []
-        for player_index in range(num_players):
-            list_of_summonerId.append(all_players_list['entries'][player_index]['summonerId'])  
+
+        if self.major:
+            for player_index in range(num_players):
+                list_of_summonerId.append(all_players_list['entries'][player_index]['summonerId'])
+        else:
+            for player_index in range(num_players):
+                list_of_summonerId.append(all_players_list[player_index]['summonerId'])
+
+
         for i in range(num_players):
             puuid_finder = self.api_urls(f'https://euw1.api.riotgames.com/lol/summoner/v4/summoners/{list_of_summonerId[i]}?')
             list_of_people_puuids.append(puuid_finder['puuid'])
@@ -70,16 +85,22 @@ class Scraper:
                         self.list_maker(participant_number, player)
 
 
+# -k : use api key 
+# -t : from 0 to 8, where 0 is challenger, 1 is grandmaster, 2 is master, etc
+# -d : from 1 to 4, where 1 is I, 2 is II, 3 is III, 4 is IV
+# -p : default is 2, from 1 to, the upper limit changes depending on tier, as different tiers have different amount of players. (NYI)
+# -v : default is 2, from 1 to 100
 parser = argparse.ArgumentParser()
 parser.add_argument("-k", "--key", type=str, help="Use API key.", required=True)
 parser.add_argument("-t", "--tier", type=int, help="Select tier [0-2].", required=True)
-parser.add_argument("-v", "--volume", type=int, default=2, help="Enter the amount of games to get data from.")
+parser.add_argument("-d", "--division", type=int, help="Select divison [0-3].", default=1)
 parser.add_argument("-p", "--people", type=int, default=2, help="Enter the total amount of players to get data from.")
+parser.add_argument("-v", "--volume", type=int, default=2, help="Enter the amount of games to get data from.")
 args = parser.parse_args()
 
 s1 = Scraper(args.key)
 
-s1.puuids(args.people, args.volume, s1.tier_choice(args.tier))
+s1.puuids(args.people, args.volume, s1.tier_choice(args.tier, args.division))
 
 item_frequency = s1.list_sorter(Scraper.items_purchased_list)
 for i in item_frequency:
