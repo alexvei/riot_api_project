@@ -7,19 +7,29 @@ import requests
 
 class Scraper:
 
-    items_purchased_list = []
-    major = True
+    items_purchased_list = []   # List of the items purchased
+    major = True                # Checks whether the tier is chall/gm/master or not.
+
+
     def __init__(self, api_key:str):
         self.api_key = api_key
 
 
     def api_urls(self, url: str)-> dict:
+        """
+        Method to use the api and get a response
+        """
+
         url = url + 'api_key=' + self.api_key
         if answer := requests.get(url):
             return answer.json()
     
 
     def tier_choice(self, tier: int, division: int):
+        """
+        Based on the arguments given, it will search for the appropriate API url, to get the list of the players in that given divison(and tier).
+        """
+
         tier_major = {
         0: 'https://euw1.api.riotgames.com/lol/league/v4/challengerleagues/by-queue/RANKED_SOLO_5x5?', 
         1: 'https://euw1.api.riotgames.com/lol/league/v4/grandmasterleagues/by-queue/RANKED_SOLO_5x5?', 
@@ -37,17 +47,25 @@ class Scraper:
 
     @staticmethod
     def list_maker(num: int, player: list):
+        """ 
+        Get the id list of all the items (items.json),
+        Then search that list with the id of the item purchased by the player to get the name of the item,
+        Append the name of the item in a list.
+        """
         get_items_list = requests.get('https://ddragon.leagueoflegends.com/cdn/14.11.1/data/en_US/item.json')
         items_list = get_items_list.json()
         for i in range(6):
             item_index = "item"+str(i)
             if item := player[num][item_index]:
                 Scraper.items_purchased_list.append(items_list['data'][str(item)]['name'])
-        return True
 
 
     @staticmethod
     def list_sorter(list_to_sort: list)-> dict:
+        """
+        Counts the items of the list and sorts them in a descending order, returning a dictionary.
+        """
+
         list_to_sort_dict = Counter(list_to_sort)
         sorted_dict = sorted(list_to_sort_dict.items(), key=lambda x:x[1], reverse=True)
         return dict(sorted_dict)
@@ -55,10 +73,15 @@ class Scraper:
 
     # Get PUUID of accounts by summonerID
     def puuids(self, num_players: int, number_of_games: int, all_players_list: list):
+        """
+        Provides the summonerId, the PUUID, the gameID and finally passes that information to get the items list.
+        """
         list_of_people_puuids = []
         list_of_summonerId = []
         stored_games = []
 
+
+        # Check if major tier or not then get the required amount of summonerIDs.
         if self.major:
             for player_index in range(num_players):
                 list_of_summonerId.append(all_players_list['entries'][player_index]['summonerId'])
@@ -66,7 +89,7 @@ class Scraper:
             for player_index in range(num_players):
                 list_of_summonerId.append(all_players_list[player_index]['summonerId'])
 
-
+        # Using the summonerIDs, get the PUUIDs and also get the requested amount of games from those PUUIDs.
         for i in range(num_players):
             puuid_finder = self.api_urls(f'https://euw1.api.riotgames.com/lol/summoner/v4/summoners/{list_of_summonerId[i]}?')
             list_of_people_puuids.append(puuid_finder['puuid'])
@@ -79,10 +102,11 @@ class Scraper:
                 specific_game = self.api_urls(f'https://europe.api.riotgames.com/lol/match/v5/matches/{stored_games[players_game_container][game_id]}?')
                 player = specific_game['info']['participants']
 
-                # Each game contains 10 different collections, 1 for each player/champion. Look for the player's PUUID in that list of 10 collections to find which collection belongs to that player. Then go in that collection look for the items and save them in a list.
                 for participant_number in range(10):
                     if list_of_people_puuids[players_game_container] in player[participant_number]['puuid']:
                         self.list_maker(participant_number, player)
+
+        return Scraper.items_purchased_list
 
 
 # -k : use api key 
@@ -100,9 +124,9 @@ args = parser.parse_args()
 
 s1 = Scraper(args.key)
 
-s1.puuids(args.people, args.volume, s1.tier_choice(args.tier, args.division))
+final_list = s1.puuids(args.people, args.volume, s1.tier_choice(args.tier, args.division))
 
-item_frequency = s1.list_sorter(Scraper.items_purchased_list)
+item_frequency = s1.list_sorter(final_list)
 for i in item_frequency:
     print(f'{i}: {item_frequency[i]}')
 
