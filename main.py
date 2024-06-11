@@ -22,10 +22,11 @@ class Scraper:
             return answer.json()
     
 
-    def league(self, tier: str):
-        return self.api_urls(tier)
-    
-    
+    def tier_choice(self, choice: int):
+        choices_list = {0: 'https://euw1.api.riotgames.com/lol/league/v4/challengerleagues/by-queue/RANKED_SOLO_5x5?', 1: 'https://euw1.api.riotgames.com/lol/league/v4/grandmasterleagues/by-queue/RANKED_SOLO_5x5?', 2: 'https://euw1.api.riotgames.com/lol/league/v4/masterleagues/by-queue/RANKED_SOLO_5x5?'}
+        return self.api_urls(choices_list[choice])
+
+
     @staticmethod
     def list_maker(num: int, player: list):
         get_items_list = requests.get('https://ddragon.leagueoflegends.com/cdn/14.11.1/data/en_US/item.json')
@@ -71,15 +72,14 @@ class Scraper:
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-k", "--key", type=str, help="Use API key.", required=True)
+parser.add_argument("-t", "--tier", type=int, help="Select tier [0-2].", required=True)
 parser.add_argument("-v", "--volume", type=int, default=2, help="Enter the amount of games to get data from.")
 parser.add_argument("-p", "--people", type=int, default=2, help="Enter the total amount of players to get data from.")
 args = parser.parse_args()
 
 s1 = Scraper(args.key)
 
-tier = 'https://euw1.api.riotgames.com/lol/league/v4/challengerleagues/by-queue/RANKED_SOLO_5x5?'
-
-s1.puuids(args.people, args.volume, s1.league(tier))
+s1.puuids(args.people, args.volume, s1.tier_choice(args.tier))
 
 item_frequency = s1.list_sorter(Scraper.items_purchased_list)
 for i in item_frequency:
