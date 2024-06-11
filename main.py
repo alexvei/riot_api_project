@@ -5,39 +5,40 @@ import json
 import requests
 
 
-get_items_list = requests.get('https://ddragon.leagueoflegends.com/cdn/14.11.1/data/en_US/item.json')
-items_list = get_items_list.json()
-items_purchased_list = []
-list_of_people_puuids = []
-list_of_summonerId = []
-stored_games = []
+
+
+
 
 class Scraper:
+
+    items_purchased_list = []
     def __init__(self, api_key:str):
         self.api_key = api_key
 
 
-    def api_urls(self, url: str):
+    def api_urls(self, url: str)-> dict:
         url = url + 'api_key=' + self.api_key
         if answer := requests.get(url):
             return answer.json()
     
 
-    def league(self, tier):
-        all_players_list = self.api_urls(tier)
-        return all_players_list
+    def league(self, tier: str):
+        return self.api_urls(tier)
     
     
     @staticmethod
     def list_maker(num: int, player: list):
+        get_items_list = requests.get('https://ddragon.leagueoflegends.com/cdn/14.11.1/data/en_US/item.json')
+        items_list = get_items_list.json()
         for i in range(6):
             item_index = "item"+str(i)
             if item := player[num][item_index]:
-                items_purchased_list.append(items_list['data'][str(item)]['name'])
+                Scraper.items_purchased_list.append(items_list['data'][str(item)]['name'])
+        return True
 
 
     @staticmethod
-    def list_sorter(list_to_sort: list):
+    def list_sorter(list_to_sort: list)-> dict:
         list_to_sort_dict = Counter(list_to_sort)
         sorted_dict = sorted(list_to_sort_dict.items(), key=lambda x:x[1], reverse=True)
         return dict(sorted_dict)
@@ -45,6 +46,9 @@ class Scraper:
 
     # Get PUUID of accounts by summonerID
     def puuids(self, num_players: int, number_of_games: int, all_players_list: list):
+        list_of_people_puuids = []
+        list_of_summonerId = []
+        stored_games = []
         for player_index in range(num_players):
             list_of_summonerId.append(all_players_list['entries'][player_index]['summonerId'])  
         for i in range(num_players):
@@ -77,6 +81,7 @@ tier = 'https://euw1.api.riotgames.com/lol/league/v4/challengerleagues/by-queue/
 
 s1.puuids(args.people, args.volume, s1.league(tier))
 
-item_frequency = s1.list_sorter(items_purchased_list)
+item_frequency = s1.list_sorter(Scraper.items_purchased_list)
 for i in item_frequency:
     print(f'{i}: {item_frequency[i]}')
+
