@@ -7,22 +7,6 @@ import requests
 
 
 class Scraper:
-    def __init__(self, api_key:str):
-        self.api_key = api_key
-        self.items_purchased_list = []   # List of the items purchased
-        self.major = True                # Checks whether the tier is chall/gm/master or not.
-
-
-    def api_urls(self, url: str)-> dict:
-        """
-        Method to use the api and get a response
-        """
-
-        url = url + 'api_key=' + self.api_key
-        if answer := requests.get(url):
-            return answer.json()
-    
-
     class tier_major(Enum):
         challenger = 'https://euw1.api.riotgames.com/lol/league/v4/challengerleagues/by-queue/RANKED_SOLO_5x5?'
         grandmaster = 'https://euw1.api.riotgames.com/lol/league/v4/grandmasterleagues/by-queue/RANKED_SOLO_5x5?'
@@ -41,6 +25,21 @@ class Scraper:
         two = 'II'
         three = 'III'
         four = 'IV'
+
+    def __init__(self, api_key:str):
+        self.api_key = api_key
+        self.items_purchased_list = []   # List of the items purchased
+        self.major = True                # Checks whether the tier is chall/gm/master or not.
+
+
+    def api_urls(self, url: str)-> dict:
+        """
+        Method to use the api and get a response
+        """
+        url = url + 'api_key=' + self.api_key
+        if answer := requests.get(url):
+            return answer.json()
+    
 
     def tier_choice(self, tier: str, division: str):
         """
@@ -86,7 +85,6 @@ class Scraper:
         list_of_people_puuids = []
         list_of_summonerId = []
         stored_games = []
-
 
         # Check if major tier or not then get the required amount of summonerIDs.
         if self.major:
