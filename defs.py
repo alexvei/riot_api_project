@@ -1,5 +1,15 @@
 from enum import Enum
 
+class divisions(Enum):
+    one = 'I'
+    two = 'II'
+    three = 'III'
+    four = 'IV'
+
+class regions(Enum):
+    eune = ['europe', 'eun1']
+    euw = ['europe', 'euw1']
+    na = ['americas', 'na1']
 
 class tier_major(Enum):
     challenger = 'https://euw1.api.riotgames.com/lol/league/v4/challengerleagues/by-queue/RANKED_SOLO_5x5?'
@@ -13,9 +23,3 @@ class tier_minor(Enum):
     silver = 'SILVER'
     bronze = 'BRONZE'
     iron = 'IRON'
-
-class divisions(Enum):
-    one = 'I'
-    two = 'II'
-    three = 'III'
-    four = 'IV'
