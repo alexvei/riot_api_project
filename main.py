@@ -93,16 +93,15 @@ class Scraper:
     
     @staticmethod
     def plotting(name: str, tag: str, items: dict):
-        plt.barh(items.keys(), items.values(), color = 'skyblue', height=1)
-        plt.ylabel('Items')
-        plt.title(f'Item Frequency of player {name}#{tag}.')
+        plt.barh(items.keys(), items.values(), color = 'skyblue', height=0.5)
+        plt.title(f'Item Frequency of player: {name}#{tag}.')
         plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
         plt.tight_layout()
         plt.show()
 
 
     # Get PUUID of accounts by summonerID
-    def puuids(self, all_players_list: list):
+    def get_puuids(self, all_players_list: list):
         """
         Provides the summonerId, the PUUID, the gameID and finally passes that information to get the items list.
         """
@@ -129,6 +128,20 @@ class Scraper:
         return self.api_urls(defs.tier_major[tier].value)
 
 
+class Plotter:
+    def __init__(self, name:str, tag:str, items: dict):
+        self.name = name
+        self.tag = tag
+        self.items = items
+    
+    def plotting(self):
+        plt.barh(self.items.keys(), self.items.values(), color = 'skyblue', height=0.5)
+        plt.title(f'Item Frequency of player: {self.name}#{self.tag}.')
+        plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
+        plt.tight_layout()
+        plt.show()
+
+    
 # Arguments parser
 parser = argparse.ArgumentParser()
 parser.add_argument("-k", "--key", type=str, help="Use API key.", required=True)
@@ -143,15 +156,20 @@ args = parser.parse_args()
 
 Starting_object = Scraper(args.key, args.people, args.volume, args.region)
 
+
+
 if args.game_name and args.tag_line:
     single_player_list = Starting_object.one_player(args.game_name, args.tag_line)
     Starting_object.get_list_of_games(single_player_list)
-else:   
-    Starting_object.puuids(Starting_object.tier_choice(args.tier, args.division))
+    item_list = Starting_object.list_to_dict(Starting_object.items_purchased_list)
+    Plot_Object = Plotter(args.game_name, args.tag_line, item_list)
+    Plot_Object.plotting()
 
-item_list = Starting_object.list_to_dict(Starting_object.items_purchased_list)
-Starting_object.plotting(args.game_name, args.tag_line, item_list)
-# for i in item_list:
-#             print(f'{i}: {item_list[i]}')
+else:   
+    Starting_object.get_puuids(Starting_object.tier_choice(args.tier, args.division))
+    item_list = Starting_object.list_to_dict(Starting_object.items_purchased_list)
+    Plot_Object = Plotter(args.tier, args.tier, item_list)
+    Plot_Object.plotting()
+
 
 
