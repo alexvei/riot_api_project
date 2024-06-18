@@ -1,11 +1,8 @@
-from collections import Counter
-from matplotlib.ticker import MaxNLocator
-import matplotlib.pyplot as plt
-import defs 
-
 import argparse
+import defs 
+import plotter
 import requests
-
+import utils
 
 class Scraper:
 
@@ -16,6 +13,7 @@ class Scraper:
         self.items_purchased_list = []   # List of the items purchased
         self.is_major_tier = True                # Checks whether the tier is chall/gm/master or not.
         self.region = region
+        self.boots_purchased_list = []
 
 
     def api_urls(self, url: str)-> dict:
@@ -72,33 +70,17 @@ class Scraper:
         for i in range(6):
             item_index = "item"+str(i)
             if item := player[num][item_index]:
-                self.items_purchased_list.append(items_list['data'][str(item)]['name'])
+                if 'Boots' in items_list['data'][str(item)]['tags']:
+                    self.boots_purchased_list.append(items_list['data'][str(item)]['name'])
+                else:
+                    self.items_purchased_list.append(items_list['data'][str(item)]['name'])
 
-
-    @staticmethod
-    def list_to_dict(list_to_convert: list)-> dict:
-        """
-        Counts the items of the list and sorts them in a descending order, returning a dictionary.
-        """
-        list_to_convert_dict = Counter(list_to_convert)
-        sorted_dict = dict(sorted(list_to_convert_dict.items(), key=lambda x:x[1], reverse=False))
-        return sorted_dict
-    
 
     def one_player(self, game_name:str, tag_line:str):
         player_info = self.api_urls(f'https://{defs.regions[self.region].value[0]}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{game_name}/{tag_line}?')
 
         return [player_info['puuid']]
-    
-    
-    @staticmethod
-    def plotting(name: str, tag: str, items: dict):
-        plt.barh(items.keys(), items.values(), color = 'skyblue', height=0.5)
-        plt.title(f'Item Frequency of player: {name}#{tag}.')
-        plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
-        plt.tight_layout()
-        plt.show()
-
+       
 
     # Get PUUID of accounts by summonerID
     def get_puuids(self, all_players_list: list):
@@ -128,20 +110,6 @@ class Scraper:
         return self.api_urls(defs.tier_major[tier].value)
 
 
-class Plotter:
-    def __init__(self, name:str, tag:str, items: dict):
-        self.name = name
-        self.tag = tag
-        self.items = items
-    
-    def plotting(self):
-        plt.barh(self.items.keys(), self.items.values(), color = 'skyblue', height=0.5)
-        plt.title(f'Item Frequency of player: {self.name}#{self.tag}.')
-        plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
-        plt.tight_layout()
-        plt.show()
-
-    
 # Arguments parser
 parser = argparse.ArgumentParser()
 parser.add_argument("-k", "--key", type=str, help="Use API key.", required=True)
@@ -157,19 +125,28 @@ args = parser.parse_args()
 Starting_object = Scraper(args.key, args.people, args.volume, args.region)
 
 
-
 if args.game_name and args.tag_line:
     single_player_list = Starting_object.one_player(args.game_name, args.tag_line)
     Starting_object.get_list_of_games(single_player_list)
-    item_list = Starting_object.list_to_dict(Starting_object.items_purchased_list)
-    Plot_Object = Plotter(args.game_name, args.tag_line, item_list)
-    Plot_Object.plotting()
+    placeholder_one = 'of player: ' + args.game_name
+    placeholder_two = '#'+args.tag_line
 
 else:   
     Starting_object.get_puuids(Starting_object.tier_choice(args.tier, args.division))
-    item_list = Starting_object.list_to_dict(Starting_object.items_purchased_list)
-    Plot_Object = Plotter(args.tier, args.tier, item_list)
-    Plot_Object.plotting()
+    placeholder_one = 'in: ' + args.tier.title()
+    if args.tier in defs.tier_major.__members__:
+        placeholder_two = ''
+    else:
+        placeholder_two = args.division.title()
 
+item_list = utils.list_to_dict(Starting_object.items_purchased_list)
+boots_list = utils.list_to_dict(Starting_object.boots_purchased_list)
 
+index = 1
+Plot_Object_one = plotter.Grapher(placeholder_one, placeholder_two, item_list, index)
+Plot_Object_one.store_plot()
+index = 2
+Plot_Object_two = plotter.Grapher(placeholder_one, placeholder_two, boots_list, index)
+Plot_Object_two.store_plot()
 
+plotter.Grapher.plot()
