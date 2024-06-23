@@ -1,11 +1,16 @@
+from defs import divisions, tier_major, tier_minor
 import argparse
 import defs 
 import plotter
 import requests
 import utils
 
-class Scraper:
 
+class Scraper:
+    regions = {'eune': ['europe', 'eun1'],
+                'euw': ['europe', 'euw1'],
+                'na': ['americas', 'na1']}
+    
     def __init__(self, api_key:str, num_players:int, number_of_games:int, region: str):
         self.api_key = api_key
         self.num_players = num_players
@@ -32,7 +37,7 @@ class Scraper:
     def get_list_of_items(self, list_of_people_puuids, stored_games):
         for players_game_container in range(self.num_players):
             for game_id in range(self.number_of_games):
-                specific_game = self.api_urls(f'https://{defs.regions[self.region].value[0]}.api.riotgames.com/lol/match/v5/matches/{stored_games[players_game_container][game_id]}?')
+                specific_game = self.api_urls(f'https://{Scraper.regions[self.region][0]}.api.riotgames.com/lol/match/v5/matches/{stored_games[players_game_container][game_id]}?')
                 player = specific_game['info']['participants']
                 for participant_number in range(10):
                     if list_of_people_puuids[players_game_container] in player[participant_number]['puuid']:
@@ -42,7 +47,7 @@ class Scraper:
     def get_list_of_games(self, list_of_puuids):
         stored_games = []
         for i in range(self.num_players):
-            games = self.api_urls(f'https://{defs.regions[self.region].value[0]}.api.riotgames.com/lol/match/v5/matches/by-puuid/{list_of_puuids[i]}/ids?start=0&count={self.number_of_games}&')
+            games = self.api_urls(f'https://{Scraper.regions[self.region][0]}.api.riotgames.com/lol/match/v5/matches/by-puuid/{list_of_puuids[i]}/ids?start=0&count={self.number_of_games}&')
             stored_games.append(games)
 
         self.get_list_of_items(list_of_puuids, stored_games)
@@ -77,7 +82,7 @@ class Scraper:
 
 
     def one_player(self, game_name:str, tag_line:str):
-        player_info = self.api_urls(f'https://{defs.regions[self.region].value[0]}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{game_name}/{tag_line}?')
+        player_info = self.api_urls(f'https://{Scraper.regions[self.region][0]}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{game_name}/{tag_line}?')
 
         return [player_info['puuid']]
        
@@ -92,7 +97,7 @@ class Scraper:
         
         # Use summonerIDs to get PUUIDs.
         for i in range(self.num_players):
-            puuid_finder = self.api_urls(f'https://{defs.regions[self.region].value[1]}.api.riotgames.com/lol/summoner/v4/summoners/{list_of_summoner_Id[i]}?')
+            puuid_finder = self.api_urls(f'https://{Scraper.regions[self.region][1]}.api.riotgames.com/lol/summoner/v4/summoners/{list_of_summoner_Id[i]}?')
             list_of_people_puuids.append(puuid_finder['puuid'])
 
         self.get_list_of_games(list_of_people_puuids)
@@ -103,7 +108,7 @@ class Scraper:
         Based on the arguments given, it will search for the appropriate API url, to get the list of the players in that given divison(and tier).
         """
         if tier in defs.tier_minor.__members__:
-            chosen = f'https://{defs.regions[self.region].value[1]}.api.riotgames.com/lol/league/v4/entries/RANKED_SOLO_5x5/{defs.tier_minor[tier].value}/{defs.divisions[division].value}?page=1&'
+            chosen = f'https://{Scraper.regions[self.region][1]}.api.riotgames.com/lol/league/v4/entries/RANKED_SOLO_5x5/{defs.tier_minor[tier].value}/{defs.divisions[division].value}?page=1&'
             self.is_major_tier = False
             return self.api_urls(chosen)
         
