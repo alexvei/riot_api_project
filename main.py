@@ -8,11 +8,6 @@ import requests
 
 
 class Scraper:
-    regions = {'eune': ['europe', 'eun1'],
-                'euw': ['europe', 'euw1'],
-                'na': ['americas', 'na1']}
-            
-
     def __init__(self, api_key:str, num_players:int, number_of_games:int, region: str):
         self.api_key = api_key
         self.num_players = num_players
@@ -21,6 +16,7 @@ class Scraper:
         self.is_major_tier = True                # Checks whether the tier is chall/gm/master or not.
         self.region = region
         self.boots_purchased_list = []
+        self.suburii = self.get_region_uri()
 
 
     def get_api_urls(self, url: str):
@@ -28,35 +24,32 @@ class Scraper:
         Method to use the api and get a response
         """
         url = url + 'api_key=' + self.api_key
-        
         answer = requests.get(url)
-        if answer.status_code == 200:
-            return answer.json()
-        else:
-            print(answer.status_code)
+
+        return answer.json() if answer.status_code == 200 else print(answer.status_code)
+
+
+    def get_list_of_games(self, list_of_puuids: list)-> list:
+        stored_games = []
+        for i in range(self.num_players):
+            games = self.get_api_urls(f'https://{self.suburii[0]}.api.riotgames.com/lol/match/v5/matches/by-puuid/{list_of_puuids[i]}/ids?start=0&count={self.number_of_games}&')
+            stored_games.append(games)
+
+        return stored_games
     
-        
+
     def get_list_of_items(self, list_of_people_puuids, stored_games):
         for players_game_container in range(self.num_players):
             for game_id in range(self.number_of_games):
-                specific_game = self.get_api_urls(f'https://{Scraper.regions[self.region][0]}.api.riotgames.com/lol/match/v5/matches/{stored_games[players_game_container][game_id]}?')
+                specific_game = self.get_api_urls(f'https://{self.suburii[0]}.api.riotgames.com/lol/match/v5/matches/{stored_games[players_game_container][game_id]}?')
                 player = specific_game['info']['participants']
                 for participant_number in range(10):
                     if list_of_people_puuids[players_game_container] in player[participant_number]['puuid']:
                         self.list_maker(participant_number, player)
 
 
-    def get_list_of_games(self, list_of_puuids: list)-> list:
-        stored_games = []
-        for i in range(self.num_players):
-            games = self.get_api_urls(f'https://{Scraper.regions[self.region][0]}.api.riotgames.com/lol/match/v5/matches/by-puuid/{list_of_puuids[i]}/ids?start=0&count={self.number_of_games}&')
-            stored_games.append(games)
-
-        return stored_games
-
-
     # Get PUUID of accounts by summonerID
-    def get_puuids(self, all_players_list: list):
+    def get_puuids(self, all_players_list: list)-> list:
         """
         Provides the summonerId, the PUUID, the gameID and finally passes that information to get the items list.
         """
@@ -65,20 +58,35 @@ class Scraper:
         
         # Use summonerIDs to get PUUIDs.
         for i in range(self.num_players):
-            puuid_finder = self.get_api_urls(f'https://{Scraper.regions[self.region][1]}.api.riotgames.com/lol/summoner/v4/summoners/{list_of_summoner_Id[i]}?')
+            puuid_finder = self.get_api_urls(f'https://{self.suburii[1]}.api.riotgames.com/lol/summoner/v4/summoners/{list_of_summoner_Id[i]}?')
             list_of_people_puuids.append(puuid_finder['puuid'])
-        
         return list_of_people_puuids
+    
+
+    def get_puuid_one_player(self, game_name:str, tag_line:str)-> list:
+        player_info = self.get_api_urls(f'https://{self.suburii[0]}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{game_name}/{tag_line}?')
+        # Return the puuid of the player as a list.
+        # player_info is a dict by default, have to turn into a list, to be subscriptable when storing games.
+        return [player_info['puuid']]
+    
+
+    def get_region_uri(self)-> tuple:
+        if self.region in ["eune", "euw"]:
+            suburi = "europe"
+            subsub_uri = "eun1" if self.region == "eune" else "euw1"
+        elif self.region == "na":
+            suburi == "americas"
+            subsub_uri == "na1"
+        else:
+            Exception("invalid region info") 
+        return suburi, subsub_uri 
 
 
     def get_summonerIDs(self, all_players_list: list)-> list:
         list_of_summonerId = []
-        if self.is_major_tier:
-            for player_index in range(self.num_players):
-                list_of_summonerId.append(all_players_list['entries'][player_index]['summonerId'])
-        else:
-            for player_index in range(self.num_players):
-                list_of_summonerId.append(all_players_list[player_index]['summonerId'])
+        target_list = all_players_list['entries'] if self.is_major_tier else all_players_list
+        for player_index in range(self.num_players):
+            list_of_summonerId.append(target_list[player_index]['summonerId'])
         return list_of_summonerId
     
 
@@ -99,20 +107,14 @@ class Scraper:
                     self.items_purchased_list.append(items_list['data'][str(item)]['name'])
 
 
-    def get_puuid_one_player(self, game_name:str, tag_line:str)-> list:
-        player_info = self.get_api_urls(f'https://{Scraper.regions[self.region][0]}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{game_name}/{tag_line}?')
-        # Return the puuid of the player as a list.
-        # player_info is a dict by default, have to turn into a list, to be subscriptable when storing games.
-        return [player_info['puuid']]
-       
-    
     def tier_choice(self, tier: str, division: str)-> dict:
         """
         Based on the arguments given, it will search for the appropriate API url, to get the list of the players in that given divison(and tier).
         """
         if tier_major.has_value(tier):
-            chosen = f'https://{Scraper.regions[self.region][1]}.api.riotgames.com/lol/league/v4/entries/RANKED_SOLO_5x5/{tier_minor[tier].value}/{divisions[division].value}?page=1&'
+            chosen = f'https://{self.suburii[1]}.api.riotgames.com/lol/league/v4/entries/RANKED_SOLO_5x5/{tier_minor[tier].value}/{divisions[division].value}?page=1&'
             self.is_major_tier = False
+            
             return self.get_api_urls(chosen)
         
         return self.get_api_urls(tier_major[tier].value)

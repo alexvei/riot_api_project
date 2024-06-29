@@ -22,6 +22,7 @@ class tier_minor(Enum):
     silver = 'SILVER'
     bronze = 'BRONZE'
     iron = 'IRON'
+    
     @classmethod
     def has_value(cls, value):
         return value in cls._value2member_map_
